@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Merger with Preview</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #f5f5f5;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .main-content {
+      grid-column: 1 / -1;
+    }
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .upload-area:hover {
+      border-color: #4a6cf7;
+      background-color: #f8f9ff;
+    }
+    .upload-area.highlight {
+      border-color: #4a6cf7;
+      background-color: #f8f9ff;
+    }
+    .upload-area p {
+      margin-bottom: 10px;
+      color: #666;
+    }
+    .upload-area .icon {
+      font-size: 48px;
+      color: #4a6cf7;
+      margin-bottom: 10px;
+    }
+    #file-input {
+      display: none;
+    }
+    .btn {
+      background-color: #4a6cf7;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+    .btn:hover {
+      background-color: #3a5bd9;
+    }
+    .btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    .btn-secondary:hover {
+      background-color: #e0e0e0;
+    }
+    .pdf-list {
+      margin-top: 20px;
+    }
+    .pdf-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      cursor: move;
+      transition: all 0.3s;
+    }
+    .pdf-item:hover {
+      background-color: #f0f0f0;
+    }
+    .pdf-item .drag-handle {
+      margin-right: 10px;
+      color: #666;
+      cursor: move;
+    }
+    .pdf-item .file-name {
+      flex-grow: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pdf-item .file-size {
+      color: #666;
+      margin-right: 15px;
+    }
+    .pdf-item .preview-btn {
+      color: #4a6cf7;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    .pdf-item .remove-btn {
+      color: #ff4d4f;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 16px;
+    }
+    .actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 10px;
+    }
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: #e0e0e0;
+      border-radius: 5px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .progress {
+      height: 100%;
+      background: #4a6cf7;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    /* Preview Modal */
+    .preview-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .preview-container {
+      background: white;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 800px;
+      max-height: 90vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .preview-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+    }
+    .preview-content {
+      flex-grow: 1;
+      overflow: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 300px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .preview-iframe {
+      width: 100%;
+      height: 100%;
+      min-height: 500px;
+      border: none;
+    }
+    .preview-nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    .page-info {
+      align-self: center;
+    }
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .upload-area {
+        padding: 20px;
+      }
+      .preview-container {
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>PDF Merger with Preview</h1>
+  <div class="container">
+    <div class="main-content">
+      <div class="upload-area" id="upload-area">
+        <div class="icon">📄</div>
+        <p>Drag & drop PDF files here or click to browse</p>
+        <p><small>(Only PDF files are supported)</small></p>
+      </div>
+      <input type="file" id="file-input" accept=".pdf" multiple>
+      
+      <div class="pdf-list" id="pdf-list"></div>
+      
+      <div class="actions">
+        <button id="merge-btn" class="btn" disabled>Merge PDFs</button>
+        <button id="clear-btn" class="btn btn-secondary" disabled>Clear All</button>
+      </div>
+      
+      <div class="status" id="status"></div>
+      <div class="progress-bar" id="progress-bar" style="display: none;">
+        <div class="progress" id="progress"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div class="preview-modal" id="preview-modal">
+    <div class="preview-container">
+      <div class="preview-header">
+        <div class="preview-title" id="preview-title">PDF Preview</div>
+        <button class="close-btn" id="close-preview">&times;</button>
+      </div>
+      <div class="preview-content">
+        <iframe class="preview-iframe" id="preview-iframe"></iframe>
+      </div>
+      <div class="preview-nav">
+        <button class="btn btn-secondary" id="prev-page" disabled>Previous</button>
+        <div class="page-info" id="page-info">Page 1 of 1</div>
+        <button class="btn btn-secondary" id="next-page" disabled>Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include PDF-Lib from CDN -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/downloadjs@1.4.7"></script>
+  <!-- Include PDF.js for preview functionality -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+
+  <script src="pdf.js">
+    
+  </script>
+</body>
+</html>
